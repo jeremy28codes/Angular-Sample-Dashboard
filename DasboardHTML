@@ -1,0 +1,196 @@
+<!-- Page-Title -->
+<div ng-show={{ISBK}}>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="page-title-box">
+                <div class="btn-group float-right m-t-15 show">
+                    <ol class="breadcrumb m-0" style="background-color:#f5f5f5; ">
+                        <li class="breadcrumb-item"><a href="index.html" >Inventory Audit</a></li>
+                        <li class="breadcrumb-item active">Dashboard</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">Dashboard</h4>
+            </div>
+        </div>
+    </div>
+    
+    <i class="fab fa-cuttlefish"></i>
+
+    <div class="row">
+        <div class="col-md-6 col-xl-3">
+            <div class="card-box tilebox-one" style="padding: 13px;">
+                <i class="fa fa-sort float-right m-0 h4 text-muted"></i>
+                <h6 class="text-muted text-uppercase mt-0"><a href="">Job Orders</a></h6>
+                <h3 class="my-3" data-plugin="counterup">{{ Dashboard[0].ForPosting }}</h3>
+                <span class="text-muted">Total <span class="badge badge-primary">FOR POSTING</span>  Job Orders</span>
+            </div>
+        </div>
+
+
+        <div class="col-md-6 col-xl-3">
+            <div class="card-box tilebox-one" style="padding: 13px;">
+                <i class="fa fa-history float-right m-0 h2 text-muted"></i>
+                <h6 class="text-muted text-uppercase mt-0"><a href="">CM Request</a></h6>
+                <h3 class="my-3"><span data-plugin="counterup">0</span></h3>
+                <span class="text-muted">Total posted  <span class="badge badge-warning">Request for adjustment</span></span>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
+            <div class="card-box tilebox-one" style="padding: 13px;">
+                <i class="fa fa-refresh float-right m-0 h2 text-muted"></i>
+                <h6 class="text-muted text-uppercase mt-0"><a href="">Unsync Item</a></h6>
+                <h3 class="my-3"><span data-plugin="counterup">{{ Dashboard[0].UnsyncItem }}</span></h3>
+                <span class="text-muted">Total Item  <span class="badge badge-success">not sync in Branch</span> </span>
+                
+            </div>
+        </div>
+
+        <!-- <i class="fas fa-balance-scale-right"></i> -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card-box tilebox-one" style="padding: 13px;">
+                <i class="fa fa-exclamation-triangle float-right m-0 h2 text-muted"></i>
+                <h6 class="text-muted text-uppercase mt-0" title="Click me to Update Stype" ng-click="Post.Stype()"><a href="#">Item w/o STYPE</a> </h6>
+                <h3 class="my-3"><span data-plugin="counterup">{{ Dashboard[0].WOStypeCnt }}</span></h3>
+                <span class="text-muted">Total transaction  <span class="badge badge-danger">Discrepancy</span> </span>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card-box tilebox-one" style="padding: 13px;">
+                <i class="fa fa-history float-right m-0 h2 text-muted"></i>
+                <h6 class="text-muted text-uppercase mt-0" ng-click = "Get.Consumptions()"><a href="#">P Count</a></h6>
+                <h3 class="my-3"><span data-plugin="counterup">{{ Dashboard[0].PostedConsumptions }}</span></h3>
+                <h6> <span class="text-muted">BRANCHES W/ POSTED P-COUNT </span></h6>
+                <span class="text-muted">Pending Branches:<span class="badge badge-danger">{{ Dashboard[0].ForPendingConsumptions }}</span></span>
+            </div>
+        </div>  
+    </div>   
+    <div class="row">
+        <div class="col-md-12 col-xl-12">
+            <div class="custom-card-box">
+                <div class="card-body">
+                    <div class="row align-items-start">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="control-label">Date Range :</label>
+                                <div class="form-row">
+                                    <div class="col-md-6">
+                                        <input type="date" id="txtdateFs" ng-model="TransTagFilter.Sdate" class="form-control-sm">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="date" id="txtdateFe" ng-model="TransTagFilter.Edate" class="form-control-sm">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--/span-->
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label class="control-label">Branch/Department :</label>
+                                <select class="form-control-sm" ng-model="TransTagFilter.Whscode" >
+                                    <option selected="selected" value="ALL">ALL</option>
+                                    <option ng-repeat="i in BranchDeptList" value="{{ i.Whscode }}">{{ i.BranchdeptCode }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="control-label"><br></label>
+                            <div class="form-group">
+                                <button type="button" class="btn waves-effect waves-light btn-primary btn-sm" ng-click="Get.LoadTransTag()"><i class="fa fa-search"></i>  Load</button>
+                            </div>
+                        </div>
+                        <!--/span-->        
+                
+                    </div>
+                    <p style="margin-bottom:2px;"><b class="text-danger">Note :</b> Double click amount in Others column to change transaction tagging </p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered" datatable="ng" dt-options="dtOptions" style="width:100%;">
+                                <thead style="white-space: nowrap; text-align:center;">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>BRANCH/DEPT</th>
+                                        <th>CODE</th>
+                                        <th>BRANCH(60)</th>
+                                        <th>BRANCH(59)</th>
+                                        <th>DEPARTMENT(67)</th>
+                                        <th>CLIENT(60)</th>
+                                        <th>CLIENT(59)</th>
+                                        <th>PHYSICAL COUNT(60)</th>
+                                        <th>PHYSICAL COUNT(59)</th>
+                                        <th>OTHERS</th>
+                                        <th>TOTAL</th>
+                                    </tr>    
+                                </thead>   
+                                <tbody style="white-space: nowrap;">
+                                    <tr ng-repeat="i in TransTagList" style="text-align:center;">
+                                        <td>{{ $index + 1}}</td>                             
+                                        <td>{{ i.Whsname }}</td>
+                                        <td>{{ i.Whscode }}</td>
+                                        <td>{{ i.GIBranchtotal }}</td>
+                                        <td>{{ i.GRBranchtotal }}</td>
+                                        <td>{{ i.Transfertotal }}</td>
+                                        <td>{{ i.GIClienttotal }}</td>
+                                        <td>{{ i.GRClienttotal }}</td>
+                                        <td>{{ i.GIPcounttotal }}</td>
+                                        <td>{{ i.GRPcounttotal }}</td>
+                                        <td>{{ i.Others }}</td>
+                                        <td>{{ i.Total }}</td>
+                                    </tr>   
+                                </tbody>    
+                        </table>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+<!-- /modal/ -->
+<div class="modal fade" id="itemconsumptions" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: seagreen;">
+                <h5 class="modal-title text-white"><i class="fa fa-info-circle"></i> List of PCounts </h5>
+            </div>           
+            <div class="modal-body">             
+                <div class="row align-items-start">
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label class="control-label">Warehouse/Branch :</label>
+                        <select class="form-control-sm" ng-model="ConsumpFilter.Whscode" ng-disabled="DisStatus" required>
+                            <option selected="selected" value="ALL">ALL</option>
+                            <option ng-repeat="i in BranchDeptList" value="{{ i.BranchdeptCode }}">{{ i.BranchdeptCode }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="control-label">Date Range :</label>
+                        <div class="form-row">
+                            <div class="col-md-6">
+                                <input type="date" id="txtSdate" ng-model="ConsumpFilter.Sdate" class="form-control-sm">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="date" id="txtEdate" ng-model="ConsumpFilter.Edate" class="form-control-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="control-label"><br></label>
+                    <div class="form-group">
+                        <button type="button" class="btn waves-effect waves-light btn-primary btn-sm" ng-click="Get.Consumptions()"><i class="fa fa-search"></i>  Load</button>
+                        <button type="button" class="btn waves-effect waves-light btn-primary btn-sm" ng-click="export()"><i class="fa fa-file-excel-o"></i>  Export</button>
+                    </div>
+                </div>
+                </div>
+                <div id="listconsumptions" class="ag-theme-balham mt-4" style="height: 400px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>                
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- end row -->
