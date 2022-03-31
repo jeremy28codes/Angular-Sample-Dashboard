@@ -1,0 +1,294 @@
+using InventoryAuditAPI.Models;
+using InventoryAuditAPI.Helper;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Web;
+using System.Data;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
+using OfficeOpenXml;
+using System.IO;
+using OfficeOpenXml.Style;
+using System.Drawing;
+
+
+namespace InventoryAuditAPI.DAL
+{
+    public class daDashboard
+    {
+        private SQLTools tool;
+
+        public List<object> GetTransTag(DateTime Sdate, DateTime Edate, string Whscode)
+        {
+            try
+            {
+                List<object> model = new List<object>();
+                tool = new SQLTools(Config.Server, Config.Database, Config.DbUser, Config.DbPwd);
+                var str = "EXEC Bookkeeping.dbo.SP_IATransTag @Sdate,@Edate,@Whscode";
+                DataTable dt = tool.sqlDT(str
+                    , new SqlParameter("@Sdate", Sdate)
+                    , new SqlParameter("@Edate", Edate)
+                    , new SqlParameter("@Whscode", Whscode)
+                    );
+
+                foreach (var item in dt.Select())
+                {
+                    model.Add(new
+                    {
+                        Whscode = Convert.ToString(item["Whscode"]),
+                        Whsname = Convert.ToString(item["Whsname"]),
+                        GIBranchtotal = Convert.ToInt32(item["GIBranchtotal"] == DBNull.Value ? 0 : item["GIBranchtotal"]),
+                        GRBranchtotal = Convert.ToInt32(item["GRBranchtotal"] == DBNull.Value ? 0 : item["GRBranchtotal"]),
+                        GIClienttotal = Convert.ToInt32(item["GIClienttotal"] == DBNull.Value ? 0 : item["GIClienttotal"]),
+                        GRClienttotal = Convert.ToInt32(item["GRClienttotal"] == DBNull.Value ? 0 : item["GRClienttotal"]),
+                        GIPcounttotal = Convert.ToInt32(item["GIPcounttotal"] == DBNull.Value ? 0 : item["GIPcounttotal"]),
+                        GRPcounttotal = Convert.ToInt32(item["GRPcounttotal"] == DBNull.Value ? 0 : item["GRPcounttotal"]),
+                        Transfertotal = Convert.ToInt32(item["Transfertotal"] == DBNull.Value ? 0 : item["Transfertotal"]),
+                        Others = Convert.ToInt32(item["Others"] == DBNull.Value ? 0 : item["Others"]),
+                        Total = Convert.ToInt32(item["Total"] == DBNull.Value ? 0 : item["Total"])
+                    });
+                }
+                dt.Dispose();
+                tool.Dispose();
+                return model;
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(ex.Message);
+            }
+        }
+
+
+
+        public List<object> GetConsumptions(DateTime Sdate, DateTime Edate, string Whscode)
+        {
+            try
+            {
+                List<object> model = new List<object>();
+                tool = new SQLTools(Config.Server, Config.Database, Config.DbUser, Config.DbPwd);
+                var str = "EXEC Bookkeeping.dbo.spPcount @mode,@Sdate,@Edate,@Branch";
+                DataTable dt = tool.sqlDT(str, new SqlParameter("@mode", "Pcount")
+                , new SqlParameter("@Sdate", Sdate)
+                , new SqlParameter("@Edate", Edate)
+                , new SqlParameter("@Branch", Whscode)
+                );
+
+                foreach (var item in dt.Select())
+                {
+                    model.Add(new
+                    {
+                        DocDate = Convert.ToDateTime(item["DocDate"]),
+                        DocEntry = Convert.ToString(item["DocEntry"]),
+                        Branch = Convert.ToString(item["Branch"]),
+                        Ref2 = Convert.ToString(item["Ref2"]),
+                        TransType = Convert.ToString(item["TransType"]),
+                        Stype = Convert.ToString(item["Stype"]),
+                        Cost = Convert.ToString(item["Cost"]),
+                        PostedBy = Convert.ToString(item["PostedBy"]),
+                        PostedDate = Convert.ToString(item["PostedDate"])
+                    });
+                }
+                dt.Dispose();
+                tool.Dispose();
+                return model;
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(ex.Message);
+            }
+        }
+        public List<object> GetDashboard(string year, int month)
+        {
+            try
+            {
+                List<object> model = new List<object>();
+                tool = new SQLTools(Config.Server, Config.Database, Config.DbUser, Config.DbPwd);
+                var str = "SELECT COUNT(0) Cnt FROM  Bookkeeping.dbo.IA_JOHDR WHERE Status = 'FOR POSTING' and ISNULL(Delstat,'N') = 'N'";
+                str = tool.sqlScalar(str);
+                Int32 ForPost = Convert.ToInt32(str);
+
+                str = "SELECT COUNT(0) Cnt FROM  " +
+                    "   Bookkeeping.dbo.IA_JODTL t0" +
+                    "   INNER JOIN  Bookkeeping.dbo.IA_JOHDR t1" +
+                    "   ON t1.JOnum = t0.JOnum AND t1.Status = 'COMPLETED'" +
+                    "   WHERE ISNULL(IsSync,0) <> 1";
+                str = tool.sqlScalar(str);
+                Int32 UnSycnItem = Convert.ToInt32(str);
+
+                str = "SELECT COUNT(0) FROM  HPCOMMON.dbo.inm1 WHERE ISNULL(SType,'') = '' and DocDate >= '1/1/2018' ";
+                str = tool.sqlScalar(str);
+                Int32 WOStype = Convert.ToInt32(str);
+
+                str = @"SELECT DISTINCT WhsCode INTO #Temp FROM HPCOMMON..Consumption WHERE Yr = @Year AND Pd = @Month AND STat ='P'
+                        SELECT COUNT(*) FROM  #Temp
+                        DROP TABLE #Temp";
+                 tool.sqlExecute(str,
+                new SqlParameter("@Year", year)
+              , new SqlParameter("@Month", month)
+             );
+                str = tool.sqlScalar(str);
+                Int32 forConsumptions = Convert.ToInt32(str);
+
+                str = @"SELECT DISTINCT WhsCode INTO #Temp FROM HPCOMMON..Consumption WHERE Yr = @Year AND Pd = @Month AND STat <>'P'
+                        SELECT COUNT(*) FROM  #Temp
+                        DROP TABLE #Temp";
+               tool.sqlExecute(str, 
+                new SqlParameter("@Year", year)
+               , new SqlParameter("@Month", month)           
+               );
+                str = tool.sqlScalar(str);
+                Int32 ForPending = Convert.ToInt32(str);
+
+
+                model.Add(new
+                {
+                    ForPosting = ForPost,
+                    UnsyncItem = UnSycnItem,
+                    WOStypeCnt = WOStype,
+                    PostedConsumptions = forConsumptions,
+                    ForPendingConsumptions = ForPending
+
+                });
+
+                tool.Dispose();
+                return model;
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(ex.Message);
+            }
+        }
+
+
+        public static MemoryStream Export(DateTime Sdate, DateTime Edate, string Whscode)
+        {
+            try
+            {
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    using (ExcelPackage pck = new ExcelPackage())
+                    {
+
+                        SQLTools tool = new SQLTools(Config.Server, Config.Database, Config.DbUser, Config.DbPwd);
+                        var str = "EXEC Bookkeeping.dbo.spPcount @mode,@Sdate,@Edate,@Branch";
+                        DataTable dt = tool.sqlDT(str, new SqlParameter("@mode", "Pcount")
+                        , new SqlParameter("@Sdate", Sdate)
+                        , new SqlParameter("@Edate", Edate)
+                        , new SqlParameter("@Branch", Whscode)
+                        );
+
+                        var model = (from DataRow item in dt.Rows
+                                     select new
+                                     {
+                                         DocDate = Convert.ToDateTime(item["DocDate"]),
+                                         DocEntry = Convert.ToString(item["DocEntry"]),
+                                         Branch = Convert.ToString(item["Branch"]),
+                                         Ref2 = Convert.ToString(item["Ref2"]),
+                                         TransType = Convert.ToString(item["TransType"]),
+                                         Stype = Convert.ToString(item["Stype"]),
+                                         Cost = Convert.ToDouble(item["Cost"]),
+                                         PostedBy = Convert.ToString(item["PostedBy"]),
+                                         PostedDate = Convert.ToString(item["PostedDate"])
+                                     }).ToList();
+                        if (dt.Rows.Count > 0)
+                        {
+                            int row = 1;
+                            int col = 1;
+                            int srow = 1;
+                            int erow = 1;
+                            int counter = 1;
+                            //Create the worksheet 
+                            ExcelWorksheet xlWS;
+                            xlWS = pck.Workbook.Worksheets.Add("Consumptions");
+                            xlWS.Cells.Style.Font.Name = "Calibri";
+                            xlWS.Cells.Style.Font.Size = 9;
+                            xlWS.Cells[row, col++].Value = "DocDate";
+                            xlWS.Cells[row, col++].Value = "DocEntry";
+                            xlWS.Cells[row, col++].Value = "Branch";
+                            xlWS.Cells[row, col++].Value = "Ref2";
+                            xlWS.Cells[row, col++].Value = "TransType";
+                            xlWS.Cells[row, col++].Value = "Stype";
+                            xlWS.Cells[row, col++].Value = "Cost";
+                            xlWS.Cells[row, col++].Value = "PostedBy";
+                            xlWS.Cells[row, col++].Value = "PostedDate";                    
+                            xlWS.Cells["1:" + row].Style.Font.Bold = true;
+                            for (int i = 1; i <= xlWS.Dimension.End.Column; i++) xlWS.Cells[row, i].Style.Border.BorderAround(ExcelBorderStyle.Medium);
+                            row++;
+                            xlWS.View.FreezePanes(row, 1);
+
+                            srow = row;
+                            foreach (var item in model)
+                            {
+                                col = 1;
+                                xlWS.Cells[row, col++].Value =item.DocDate;
+                                xlWS.Cells[row, col++].Value =item.DocEntry;
+                                xlWS.Cells[row, col++].Value =item.Branch;
+                                xlWS.Cells[row, col++].Value =item.Ref2;
+                                xlWS.Cells[row, col++].Value =item.TransType;
+                                xlWS.Cells[row, col++].Value =item.Stype;
+                                xlWS.Cells[row, col++].Value =item.Cost;
+                                xlWS.Cells[row, col++].Value =item.PostedBy;
+                                xlWS.Cells[row, col++].Value =item.PostedDate;                             
+                                row++;
+                            }
+
+                            xlWS.Cells["G:"].Style.Numberformat.Format = "_(* #,##0.00_);_(* (#,##0.00);_(* " + "-" + "??_);_(@_)";
+
+                            xlWS.Column(1).AutoFit();
+                            xlWS.Column(2).AutoFit();
+                            xlWS.Column(3).AutoFit();
+                            xlWS.Column(4).AutoFit();
+                            xlWS.Column(5).AutoFit();
+                            xlWS.Column(6).AutoFit();
+                            xlWS.Column(7).AutoFit();
+                            xlWS.Column(8).AutoFit();
+                            xlWS.Column(9).AutoFit();
+                            xlWS.Cells["A:A"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                            xlWS.Cells["E:G"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                            //xlWS.Cells[(srow - 1) + ":" + (srow - 1)].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                            dt.Dispose();
+                            tool.Dispose();
+
+                            pck.SaveAs(ms);
+
+                            return ms;
+                        }
+                        else
+                        {
+                            dt.Dispose();
+                            tool.Dispose();
+                            throw new ApplicationException("Data not found.");
+                        }
+
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException(ex.Message);
+            }
+        }
+        public void PutStype()
+        {
+            tool = new SQLTools(Config.Server, Config.Database, Config.DbUser, Config.DbPwd);
+
+            try
+            {
+                var str = "";
+
+                str = "EXEC HPCOMMON.dbo.spSType";
+                tool.sqlExecute(str);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+    }
+
+}
