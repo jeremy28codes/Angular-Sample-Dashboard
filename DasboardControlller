@@ -1,0 +1,239 @@
+'use strict';
+
+var App = angular
+    .module('App')
+    .controller('Dashboard', Dashboard);
+
+Dashboard.$inject = ['$scope', '$timeout', '$location', '$rootScope', '$localStorage','DashboardServices','MasterdataMainServices','SweetAlert','toastr'];
+
+function Dashboard($scope, $timeout, $location, $rootScope, $localStorage,DashboardServices,MasterdataMainServices,SweetAlert,toastr) {
+    $rootScope.Dashboard = "active";
+    $rootScope.Masterdata = "";
+    $rootScope.Transaction = "";
+    $rootScope.Reports = "";
+    $rootScope.Tools = "";
+
+   if($localStorage.currentUser.SecCode == 7  && $localStorage.currentUser.DeptCode == 1) {
+       $scope.ISBK = true ;
+   }else {
+       $scope.ISBK = true ;
+   }
+   var gridoptions = {}
+
+   $scope.TransTagFilter =  {
+       Edate:new Date(),
+       Sdate:new Date(),
+       Whscode: 'ALL'
+   };
+
+      $scope.ConsumpFilter =  {
+        Sdate:new Date(),
+        Edate:new Date(),
+        Whscode: 'ALL',
+        // IncZero: true
+        };
+
+        
+
+    $scope.filter = { 
+         year: $scope.ConsumpFilter.Sdate.getFullYear(),
+         month: $scope.ConsumpFilter.Sdate.getMonth(),
+    }
+       
+
+    $scope.dtOptions = {
+        paging: false,
+        searching: false,
+        scrollX: true,
+        scrollY: "50vh",
+        autoWidth: false,
+        scrollCollapse: true,
+        lengthChange: false,
+        ordering:false
+    };
+
+    var Get = {
+        LoadDashboard:function (){
+            DashboardServices.Get.Dashboard($scope.filter,function (response) {
+                if (response.success) {
+                    $scope.Dashboard = response.data;
+                } else {
+                    $scope.Dashboard = {};
+                }
+            });
+        },
+        LoadBranchDeptList:function (){
+            MasterdataMainServices.Get.BranchDeptList(function (response) {
+                if (response.success) {
+                    $scope.BranchDeptList = response.data;
+                } else {
+                    $scope.BranchDeptList = {};
+                }
+            });
+        },
+        Consumptions:function (){
+            window.swal({
+                title: "Checking...",
+                text: "Please wait",
+                imageUrl: "Src/Plugins/SweetAlert/Loading.gif",
+                showConfirmButton: false,
+                allowOutsideClick: false});
+            DashboardServices.Get.Consumptionlist($scope.ConsumpFilter ,function (response){
+                if(response.success){
+                 gridoptions.api.showLoadingOverlay();
+                    $scope.Consumptionlist = response.data;
+                    window.swal({
+                        title: "Load Success!",
+                        type: "success",
+                        showConfirmButton: false,
+                        timer: 900
+                    });
+
+                    // console.log($scope.Consumptionlist);
+                    gridoptions.api.setRowData($scope.Consumptionlist);
+                    angular.element("#itemconsumptions").modal({backdrop: 'static'}) ;
+                    $scope.loading = false
+                } else {
+                    $scope.Consumptionlist = {};
+                    window.swal({
+                        title: "No Record Found!",
+                        type: "success",
+                        showConfirmButton: false,
+                        timer: 900
+                    });
+                }
+
+
+            }
+            )
+        },
+        LoadTransTag:function (){
+            window.swal({
+                title: "Checking...",
+                text: "Please wait",
+                imageUrl: "Src/Plugins/SweetAlert/Loading.gif",
+                showConfirmButton: false,
+                allowOutsideClick: false
+            });
+            DashboardServices.Get.TranstagList($scope.TransTagFilter,function (response) {
+                if (response.success) {
+                    $scope.TransTagList = response.data;
+                    window.swal({
+                        title: "Load Success!",
+                        type: "success",
+                        showConfirmButton: false,
+                        timer: 900
+                    });
+                } else {
+                    $scope.TransTagList = {};
+                    window.swal({
+                        title: "No Record Found!",
+                        type: "success",
+                        showConfirmButton: false,
+                        timer: 900
+                    });
+                }
+            });
+        }
+    }
+
+    var Post = {
+        Stype:function (){
+            window.swal({
+                title: "Updating...",
+                text: "Please wait",
+                imageUrl: "Src/Plugins/SweetAlert/Loading.gif",
+                showConfirmButton: false,
+                allowOutsideClick: false
+            });
+            DashboardServices.Put.Stype(function (response) {
+                if (response.success) {
+                    Get.LoadDashboard();
+                    swal.clickCancel();
+                    toastr.success("Update Success", { timeOut: 2000 });
+
+                }
+            });
+        }
+
+    }
+
+    var Put = {
+
+    }
+
+    var Events = {
+
+    }
+
+    Get.LoadBranchDeptList();
+    Get.LoadDashboard();
+    // grid_init();
+
+    $scope.export = function(){
+        DashboardServices.Get.Export($scope.ConsumpFilter, function (response) {
+            if (response.success) {
+                gridoptions.api.showLoadingOverlay();
+                window.swal({
+                    title: "export Success!",
+                    type: "success",
+                    showConfirmButton: false,
+                    timer: 900
+                });
+            } else {
+                window.swal({
+                    title: "No Record Found!",
+                    type: "success",
+                    showConfirmButton: false,
+                    timer: 900
+                });
+            }
+        });
+        
+    }
+
+function grid_init(){
+    var columnDefs = [
+       {headerName: 'DocDate', field: 'DocDate', width: 150 , cellClass: 'text-center'},  
+       {headerName: 'DocEntry', field: 'DocEntry', width: 150 , cellClass: 'text-center', cellRenderer: function(params) {
+           $localStorage.Whscode = $scope.ConsumpFilter.Whscode;
+           $localStorage.Years = $scope.filter.year;
+           $localStorage.month =  $scope.filter.month;
+           $localStorage.Catcode = 'ALL';
+        return '<a  href="#!/Consumptions" whscode="'+ $scope.ConsumpFilter.Whscode+'",Years ="'+ $scope.filter.year+'",month ="'+ $scope.filter.month+'", Catcode="ALL", target="_blank">'+ params.value+'</a>'
+        } },
+       {headerName: 'Branch', field: 'Branch', width: 150 , cellClass: 'text-center'},
+       {headerName: 'Ref2', field: 'Ref2', width: 150 , cellClass: 'text-center'},
+       {headerName: 'SType', field: 'Stype', width: 150 , cellClass: 'text-center'},
+       {headerName: 'TransType', field: 'TransType', width: 150 , cellClass: 'text-center'},
+       {headerName: 'Cost', field: 'Cost', width: 150 , cellClass: 'text-center'},
+       {headerName: 'Poted By.', field: 'PostedBy', width: 150 , cellClass: 'text-center'},
+       {headerName: 'Posting Date ', field: 'PostedDate', width: 150 , cellClass: 'text-center'},
+    ];
+    gridoptions.defaultColDef = {
+        resizable: true,
+        sortable: true,
+    };
+
+    // gridoptions.onCellClicked = function (e)  {
+    //     if (e.colDef.field == 'DocEntry') Docentry(e.data);
+    // }
+    gridoptions.columnDefs = columnDefs;
+    gridoptions.enableCellTextSelection = true;
+    gridoptions.animateRows = true;
+    gridoptions.rowSelection = 'multiple';
+    var eGridDiv = document.querySelector('#listconsumptions');
+    new agGrid.Grid(eGridDiv, gridoptions);
+    gridoptions.api.showNoRowsOverlay();
+
+}
+    $scope.Get = Get;
+    $scope.Post = Post;
+    $scope.Put = Put;
+    $scope.Events = Events;
+    grid_init();
+
+
+}
+
+
